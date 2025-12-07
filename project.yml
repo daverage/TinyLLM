@@ -1,0 +1,20 @@
+name: TinyLLM
+options:
+  minimumXcodeGenVersion: 2.38.0
+targets:
+  TinyLLM:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/TinyLLM
+        includes:
+          - "**/*.swift"
+    resources:
+      - path: Sources/TinyLLM/Assets.xcassets
+    settings:
+      PRODUCT_NAME: TinyLLM
+      PRODUCT_BUNDLE_IDENTIFIER: com.roocode.TinyLLM
+      MACOSX_DEPLOYMENT_TARGET: 14.0
+      INFOPLIST_FILE: $(SRCROOT)/Info.plist
+      SWIFT_VERSION: 6.0

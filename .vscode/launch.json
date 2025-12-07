@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:TinyLLM}",
+            "name": "Debug TinyLLM",
+            "target": "TinyLLM",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug TinyLLM"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:TinyLLM}",
+            "name": "Release TinyLLM",
+            "target": "TinyLLM",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release TinyLLM"
+        }
+    ]
+}

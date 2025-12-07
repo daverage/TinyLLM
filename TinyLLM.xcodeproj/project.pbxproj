@@ -1,0 +1,357 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		04F60129B86EEC429E42EF59 /* DiagnosticsOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2713E7BC2D51480B6C412E3 /* DiagnosticsOverlay.swift */; };
+		089F0ABC1F68FC183D479B6D /* BuildPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40250180ADFE0DF1E4A4D6DF /* BuildPanelView.swift */; };
+		173DC7F077C1D5D56FF9C1CD /* HardwareService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B710F21CA158FE7949B3A42 /* HardwareService.swift */; };
+		3CF815F4CE6124EB3D4D39D3 /* AdvancedSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC85E7725BD348949AA22F96 /* AdvancedSettingsView.swift */; };
+		4D46B2A8964D3639FC6A406D /* StatusMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00BCE4F12166AB1E1851465B /* StatusMenuView.swift */; };
+		6657C18F172F830CCFBD0B34 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB27BB5E196AC9A03F7A47DE /* AppDelegate.swift */; };
+		67B5CB7CCA7F33E5EE953C2C /* TinyLLMApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1046BC0E48658E47B96932FE /* TinyLLMApp.swift */; };
+		736EA20FF076D1E99CD4931B /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F27F79154B1539E49DA4B0 /* SettingsWindow.swift */; };
+		795D78B1B549DA4E2CEF674B /* BenchmarkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 759018E11BCC53A9EDCFE48B /* BenchmarkService.swift */; };
+		7E5A413FC8E89AD0100181F5 /* ModelIndexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C28F6E66FF4614C78ECEF49 /* ModelIndexService.swift */; };
+		9731E6CE13108E2B2D60F93D /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3D919A42E7B7513B806798 /* MainWindowView.swift */; };
+		97C96221086F0D814F203275 /* LLMTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD39FF9A559E5E40EB4544E7 /* LLMTypes.swift */; };
+		A9BEA9F42EF146B5B996EBD5 /* ThermalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49011766D187A1460E8F63F5 /* ThermalService.swift */; };
+		BBE1261251E6BBD9C3B81A45 /* LogsPaneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC328C1129E9A34EDA94FA33 /* LogsPaneView.swift */; };
+		C3C947A2ECA4488972295B7E /* ProcessRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2381C652C01A8ECC956F8CA0 /* ProcessRunner.swift */; };
+		D7A7D2E52B3F37523D67CFFC /* ProcessService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F115BC3C890727C26C28421 /* ProcessService.swift */; };
+		D9638C185D9DE30348BFE7C8 /* LLMManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7230F9F3A764B835D390A270 /* LLMManager.swift */; };
+		E0FC0F9863589D89B3F5F588 /* ModelManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D08E4F28077029807AB4F5 /* ModelManagerView.swift */; };
+		E37F2FE9A7E86FED628B3CBD /* SafeguardBadgesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6370885F0745C9BFCF59B1C /* SafeguardBadgesView.swift */; };
+		F3F85FE42706085664968280 /* AppSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8F07D22965D165CF9589400 /* AppSidebar.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		00BCE4F12166AB1E1851465B /* StatusMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuView.swift; sourceTree = "<group>"; };
+		1046BC0E48658E47B96932FE /* TinyLLMApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinyLLMApp.swift; sourceTree = "<group>"; };
+		2381C652C01A8ECC956F8CA0 /* ProcessRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessRunner.swift; sourceTree = "<group>"; };
+		32D08E4F28077029807AB4F5 /* ModelManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManagerView.swift; sourceTree = "<group>"; };
+		3C28F6E66FF4614C78ECEF49 /* ModelIndexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelIndexService.swift; sourceTree = "<group>"; };
+		40250180ADFE0DF1E4A4D6DF /* BuildPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildPanelView.swift; sourceTree = "<group>"; };
+		49011766D187A1460E8F63F5 /* ThermalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThermalService.swift; sourceTree = "<group>"; };
+		4F115BC3C890727C26C28421 /* ProcessService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessService.swift; sourceTree = "<group>"; };
+		66F27F79154B1539E49DA4B0 /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
+		6B710F21CA158FE7949B3A42 /* HardwareService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareService.swift; sourceTree = "<group>"; };
+		7230F9F3A764B835D390A270 /* LLMManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMManager.swift; sourceTree = "<group>"; };
+		759018E11BCC53A9EDCFE48B /* BenchmarkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkService.swift; sourceTree = "<group>"; };
+		915091F16670C8CB7B6EA270 /* TinyLLM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TinyLLM.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2713E7BC2D51480B6C412E3 /* DiagnosticsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsOverlay.swift; sourceTree = "<group>"; };
+		A6370885F0745C9BFCF59B1C /* SafeguardBadgesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeguardBadgesView.swift; sourceTree = "<group>"; };
+		AC85E7725BD348949AA22F96 /* AdvancedSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedSettingsView.swift; sourceTree = "<group>"; };
+		BC328C1129E9A34EDA94FA33 /* LogsPaneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogsPaneView.swift; sourceTree = "<group>"; };
+		CB27BB5E196AC9A03F7A47DE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		CB3D919A42E7B7513B806798 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
+		CD39FF9A559E5E40EB4544E7 /* LLMTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMTypes.swift; sourceTree = "<group>"; };
+		F8F07D22965D165CF9589400 /* AppSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSidebar.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		197BC6CD948369541EE7048E /* TinyLLM */ = {
+			isa = PBXGroup;
+			children = (
+				AC85E7725BD348949AA22F96 /* AdvancedSettingsView.swift */,
+				CB27BB5E196AC9A03F7A47DE /* AppDelegate.swift */,
+				F8F07D22965D165CF9589400 /* AppSidebar.swift */,
+				759018E11BCC53A9EDCFE48B /* BenchmarkService.swift */,
+				40250180ADFE0DF1E4A4D6DF /* BuildPanelView.swift */,
+				A2713E7BC2D51480B6C412E3 /* DiagnosticsOverlay.swift */,
+				6B710F21CA158FE7949B3A42 /* HardwareService.swift */,
+				7230F9F3A764B835D390A270 /* LLMManager.swift */,
+				CD39FF9A559E5E40EB4544E7 /* LLMTypes.swift */,
+				BC328C1129E9A34EDA94FA33 /* LogsPaneView.swift */,
+				CB3D919A42E7B7513B806798 /* MainWindowView.swift */,
+				3C28F6E66FF4614C78ECEF49 /* ModelIndexService.swift */,
+				32D08E4F28077029807AB4F5 /* ModelManagerView.swift */,
+				2381C652C01A8ECC956F8CA0 /* ProcessRunner.swift */,
+				4F115BC3C890727C26C28421 /* ProcessService.swift */,
+				A6370885F0745C9BFCF59B1C /* SafeguardBadgesView.swift */,
+				66F27F79154B1539E49DA4B0 /* SettingsWindow.swift */,
+				00BCE4F12166AB1E1851465B /* StatusMenuView.swift */,
+				49011766D187A1460E8F63F5 /* ThermalService.swift */,
+				1046BC0E48658E47B96932FE /* TinyLLMApp.swift */,
+			);
+			name = TinyLLM;
+			path = Sources/TinyLLM;
+			sourceTree = "<group>";
+		};
+		1E9E440FDEFD2391BDB4E095 = {
+			isa = PBXGroup;
+			children = (
+				197BC6CD948369541EE7048E /* TinyLLM */,
+				DD1A0F702516663B7589E2F1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DD1A0F702516663B7589E2F1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				915091F16670C8CB7B6EA270 /* TinyLLM.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		75D3491CC3B622932AA4DC00 /* TinyLLM */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F00AA8D68A7D33E7426FA3F6 /* Build configuration list for PBXNativeTarget "TinyLLM" */;
+			buildPhases = (
+				AD61B12BD289C8245D4527C8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TinyLLM;
+			packageProductDependencies = (
+			);
+			productName = TinyLLM;
+			productReference = 915091F16670C8CB7B6EA270 /* TinyLLM.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6408CE149DA4CB866BE7BA6B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = DE59FC7081DD610065FEC752 /* Build configuration list for PBXProject "TinyLLM" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 1E9E440FDEFD2391BDB4E095;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				75D3491CC3B622932AA4DC00 /* TinyLLM */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AD61B12BD289C8245D4527C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3CF815F4CE6124EB3D4D39D3 /* AdvancedSettingsView.swift in Sources */,
+				6657C18F172F830CCFBD0B34 /* AppDelegate.swift in Sources */,
+				F3F85FE42706085664968280 /* AppSidebar.swift in Sources */,
+				795D78B1B549DA4E2CEF674B /* BenchmarkService.swift in Sources */,
+				089F0ABC1F68FC183D479B6D /* BuildPanelView.swift in Sources */,
+				04F60129B86EEC429E42EF59 /* DiagnosticsOverlay.swift in Sources */,
+				173DC7F077C1D5D56FF9C1CD /* HardwareService.swift in Sources */,
+				D9638C185D9DE30348BFE7C8 /* LLMManager.swift in Sources */,
+				97C96221086F0D814F203275 /* LLMTypes.swift in Sources */,
+				BBE1261251E6BBD9C3B81A45 /* LogsPaneView.swift in Sources */,
+				9731E6CE13108E2B2D60F93D /* MainWindowView.swift in Sources */,
+				7E5A413FC8E89AD0100181F5 /* ModelIndexService.swift in Sources */,
+				E0FC0F9863589D89B3F5F588 /* ModelManagerView.swift in Sources */,
+				C3C947A2ECA4488972295B7E /* ProcessRunner.swift in Sources */,
+				D7A7D2E52B3F37523D67CFFC /* ProcessService.swift in Sources */,
+				E37F2FE9A7E86FED628B3CBD /* SafeguardBadgesView.swift in Sources */,
+				736EA20FF076D1E99CD4931B /* SettingsWindow.swift in Sources */,
+				4D46B2A8964D3639FC6A406D /* StatusMenuView.swift in Sources */,
+				A9BEA9F42EF146B5B996EBD5 /* ThermalService.swift in Sources */,
+				67B5CB7CCA7F33E5EE953C2C /* TinyLLMApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0A776FFE69E6B6FA13BA701F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		3AB6056EA08CE67D62B098CE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.roocode.TinyLLM;
+				PRODUCT_NAME = TinyLLM;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		4392CF18206B48F4853E0B29 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.roocode.TinyLLM;
+				PRODUCT_NAME = TinyLLM;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		8E050126C2ABC9986FA3C324 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DE59FC7081DD610065FEC752 /* Build configuration list for PBXProject "TinyLLM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0A776FFE69E6B6FA13BA701F /* Debug */,
+				8E050126C2ABC9986FA3C324 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F00AA8D68A7D33E7426FA3F6 /* Build configuration list for PBXNativeTarget "TinyLLM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4392CF18206B48F4853E0B29 /* Debug */,
+				3AB6056EA08CE67D62B098CE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 6408CE149DA4CB866BE7BA6B /* Project object */;
+}
