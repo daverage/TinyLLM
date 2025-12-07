@@ -20,11 +20,12 @@ struct DiagnosticsOverlay: View {
                 HStack(spacing: 12) {
                     pulse
                     VStack(alignment: .leading, spacing: 6) {
-                        statRow(label: "CPU", value: manager.cpuPercent)
-                        statRow(label: "Memory", value: manager.memPercent)
+                        statRow(label: "CPU", value: manager.runtimeMetrics.llmCPUDisplay)
+                        statRow(label: "System Mem", value: manager.runtimeMetrics.systemMemoryDisplay)
+                        statRow(label: "LLM Mem", value: manager.runtimeMetrics.llmMemoryDisplay)
                         statRow(label: "Health", value: manager.healthState.rawValue.capitalized)
                         statRow(label: "Model", value: manager.selectedModel?.filename ?? "None")
-                        statRow(label: "Temp State", value: manager.thermalState.rawValue.capitalized)
+                        statRow(label: "Temp State", value: manager.runtimeMetrics.thermalState.rawValue.capitalized)
                     }
                 }
             }
@@ -57,7 +58,7 @@ struct DiagnosticsOverlay: View {
     }
 
     private var pulseColor: Color {
-        switch manager.thermalState {
+        switch manager.runtimeMetrics.thermalState {
         case .nominal: return .green
         case .moderate: return .yellow
         case .heavy: return .orange

@@ -1,174 +1,293 @@
-# 🧩 TinyLLM Full Task List  
-Comprehensive issue list extracted from the full code review.
+Below is a clean, ready-to-paste, fully formatted Markdown task list, prioritised exactly as discussed.
+
+It is formatted to be a GitHub-friendly project task file, suitable for /docs/tinyllm_task_list.md or a GitHub Project board.
+
 
 ---
 
-## 🔴 CRITICAL ISSUES
+🛠️ TinyLLM — High-Impact Priority Task List
 
-### 1. **Major Memory Leak – ProcessService.swift (Lines 68–78)**
-- [x] Detached task reading from pipe never terminates  
-- [x] Holds file handle references after process dies  
-- [x] Background tasks continue indefinitely  
-- [x] Memory grows unbounded when restarting server  
-- [x] Critical for long-running usage  
-**Fix:**
-- [x] Store task reference (`logTask`)  
-- [x] Cancel and nil out in `terminate()`  
+Ordered from highest impact → lowest impact (Tier 0 → Tier 3)
 
-### 2. **File Handle Leaks – LLMManager.swift (Lines 813–818)**
-- [x] `try? handle.close()` swallows failures  
-- [x] If close fails, descriptor leaks  
-- [x] Happens on every log write  
-**Fix:**
-- [x] Wrap in `do/catch` with `defer { try? close }`  
+Based on full review of all 21 project files
 
-### 3. **Inefficient Log Tail Reading – LLMManager.swift (835–838)**
-- [x] Reads entire log file into memory each update  
-- [x] For long runs, file becomes huge  
-- [x] Called on every FS event  
-- [x] High RAM usage on M3 16GB  
-**Fix:**
-- [x] Replace with “read last N bytes” tail logic  
-
-### 4. **Timer Retention Cycle Risk – LLMManager.swift (610–612)**
-- [x] Timer → Task pattern creates nested async contexts  
-- [x] Multiple repeating timers (health + metrics)  
-- [x] Possible runaway task creation  
-**Fix:**
-- [x] Replace timers with async-loop tasks  
-- [x] Add proper cancellation (`healthTask`)  
 
 ---
 
-## ⚠️ SIGNIFICANT INEFFICIENCIES
+🟥 TIER 0 — Immediate, Highest-Impact Improvements
 
-### 5. **Redundant Hardware Detection – HardwareService.swift**
-- [x] `detectRAM()` called every 3s  
-- [x] Syscall performed every time  
-- [x] Unnecessary overhead  
-**Fix:**
-- [x] Add RAM cache (`cachedRAMGB`)  
+0.1 Unify Metrics & Health (Major Stability Fix)
 
-### 6. **Excessive UserDefaults Writes – LLMManager.swift (71–95)**
-- [x] Every `@Published` change triggers disk write  
-- [x] `applyRecommended()` writes 8+ values one by one  
-- [x] Guard during restore helps but still heavy  
-**Fix:**
-- [x] Batch writes into one dictionary commit  
+[x] Create RuntimeMetrics struct with:
 
-### 7. **Code Duplication – Log Viewer**
-- [ ] Same ScrollView/Text UI duplicated in:  
-  - LogsPaneView.swift:21–29  
-  - MainWindowView.swift:217–227  
-**Fix:**
-- [ ] Create reusable `LogViewerComponent`  
+[x] systemMemPercent
 
-### 8. **Formatters Created Per View Instance – ModelManagerView.swift**
-- [ ] New formatters for each row  
-- [ ] Expensive initialization  
-**Fix:**
-- [ ] Make static/shared singleton formatters  
+[x] llmMemPercent
 
-### 9. **Inefficient Model Index Persistence – ModelIndexService.swift (138–146)**
-- [x] Pretty printing and sorted keys slow  
-- [x] Called on every scan  
-- [x] async queue + mutable dict + @unchecked Sendable = risk  
-**Fix:**
-- [x] Remove pretty printing  
-- [x] Debounce updates  
-- [x] Consider converting to an actor  
+[x] llmCPUPercent
+
+[x] thermalState
+
+
+[x] Replace 2 async loops with one updateRuntimeState() loop inside LLMManager
+
+[x] Move metrics loop out of AppDelegate
+
+[x] All health logic reads from the unified metrics struct
+
+
 
 ---
 
-## 🟡 LLM-SPECIFIC OPTIMIZATIONS (M3 / 16GB)
+0.2 Add Process-Level Memory Tracking (Prevents Crashes)
 
-### 10. **Context Size Too Conservative**
-- [ ] Caps at 32K for 16GB  
-- [ ] Doesn’t account for M3 UM architecture  
-- [ ] No dynamic memory check  
-**Fix:**
-- [ ] Safe increase to 48K–64K for 7B  
-- [ ] Base on available memory, not total RAM  
+[x] Extend ProcessService.getProcessMetrics() to include %mem
 
-### 11. **No KV Cache Size Limits**
-- [ ] Cache can grow unbounded  
-- [ ] Critical for long conversations  
-**Fix:**
-- [ ] Add explicit `--cache-size` argument  
+[x] Add llmMemPercent to RuntimeMetrics
 
-### 12. **Missing Memory-Aware Batch Size**
-- [ ] Always 512, even under pressure  
-**Fix:**
-- [ ] Compute adaptive batch size based on memory state  
+[x] Update memory pressure classification to use:
 
-### 13. **Thermal Monitoring Is Passive**
-- [ ] Detects thermal state but doesn’t react  
-- [ ] On M3, GPU throttling hurts inference  
-**Fix:**
-- [ ] Reduce GPU layers and batch size under heat  
+[x] System memory
+
+[x] LLM process memory
+
+
+[x] Update auto-safeguards to use new combined pressure logic
+
+
 
 ---
 
-## 📦 LIBRARY USAGE ANALYSIS
+0.3 Safer Context & KV Cache Defaults (Essential for 16GB Macs)
 
-### Current Dependencies
-- Zero external dependencies (good)  
+[x] Add RAM-sensitive ctxSize ceilings:
 
-### Optional Enhancements
-- [ ] Add SwiftLog for structured logging  
-- [ ] Add SwiftSystem for safer file ops  
-- [ ] Add AsyncAlgorithms for async timers  
+[x] 8GB: 8–16k
+
+[x] 16GB: 32–48k
+
+[x] >7B on 16GB: ≤32k
+
+[x] 32GB: 65k–128k
+
+
+[x] Implement RAM-aware KV cache sizing:
+
+[x] cacheRamMB = min(ramGB * 256, ctx / 4)
+
+
+[x] Add safe fallback if memory pressure is high during startup
+
+
 
 ---
 
-## 🔧 QUICK WINS (Prioritized for M3 / 16GB)
+0.4 Debounce Log Tail Updates (Big CPU Optimization)
 
-### Priority 1 – Memory (Fix ASAP)
-- [ ] Fix log task leak (Issue #1)  
-- [ ] Switch log tail to “last N bytes” (Issue #3)  
-- [ ] Fix FileHandle leaks (Issue #2)  
+[x] Throttle log tail updates to 150–300ms
 
-### Priority 2 – Performance
-- [ ] Cache RAM detection (Issue #5)  
-- [ ] Use static formatters (Issue #8)  
-- [ ] Add KV cache size limits (Issue #11)  
+[x] Reduce tail bytes from 64KB → 16–32KB
 
-### Priority 3 – Code Quality
-- [ ] Shared LogViewer (Issue #7)  
-- [ ] Batch UserDefaults writes (Issue #6)  
-- [ ] Replace timers with async loop (Issue #4)  
+[x] Ensure only one update runs at a time (avoid overlapping work)
+
+
 
 ---
 
-## 📊 ESTIMATED MEMORY IMPROVEMENT
+0.5 Reduce Default GPU Layers (Metal Stability Fix)
 
-### Current
-- Base app: 50–100MB  
-- Model 7B Q4: ~4–5GB  
-- 32K context: ~2–3GB  
-- KV cache: ~1–2GB  
-- Logs: 10–500MB  
-- **Total: 8–11GB**
+[x] Replace default 999 GPU layers with RAM-aware values:
 
-### After Fixes
-- Log tail fix: save 50–200MB  
-- Task leaks: save 20–100MB  
-- **Total: 100–300MB saved**  
+[x] 8GB → 30–60 layers
+
+[x] 16GB → 80–120 layers
+
+[x] 32GB → “all layers” allowed
+
+
+[x] Apply thermal scaling after this base value
+
+[x] Add “GPU Aggressiveness” setting (Low / Balanced / High / Max)
+
+
 
 ---
 
-## 🎯 M3 16GB Recommended Defaults
+🟧 TIER 1 — High-Value Improvements
 
-- ctx: **49152**  
-- batch: **512**  
-- nGpu: **999**  
-- cacheK/V: **q4_0**  
-- flash: **true**  
-- Add dynamic headroom detection  
-- Add adaptive throttling  
+1.1 Static ISO8601 Formatter
+
+[x] Replace ISO8601DateFormatter() per log line with:
+
+static let df = ISO8601DateFormatter()
+
+
 
 ---
 
+1.2 Host Performance Profiles
+
+Add a simple UI dropdown:
+
+[x] Quiet Mode
+
+Low threads
+
+Lower GPU layers
+
+Smaller batch
+
+
+[x] Balanced (current defaults but safer)
+
+[x] Performance Mode
+
+Max threads
+
+Max GPU layers
+
+Higher batch
 
 
 
+
+---
+
+1.3 Flash Attention Capability Detection
+
+[x] Run one-time check:
+
+llama-server --help | grep flash-attn
+
+[x] Disable toggle if unavailable
+
+[x] Store support flag in hardware detection
+
+
+
+---
+
+1.4 Separate Host & Server Logs
+
+[x] Create tinyllm.log (app logs)
+
+[x] Create llama-server.log (server output)
+
+[x] Add UI toggle: Host / Server / Combined
+
+[x] Adjust ProcessService to only write server logs
+
+[x] Adjust LLMManager.appendLog to only write host logs
+
+
+
+---
+
+🟨 TIER 2 — Medium-Impact Enhancements
+
+2.1 Emergency Safe Mode
+
+Trigger when:
+
+llmMemPercent > 25–30%
+
+OR systemMemPercent > 80%
+
+OR thermal == .hotspot
+
+
+Actions:
+
+[ ] Reduce ctx to 4–8k
+
+[ ] Reduce batch by 50–70%
+
+[ ] Reduce GPU layers to < 25%
+
+[ ] Disable FlashAttention
+
+[ ] Lower threadCount
+
+[ ] Show Safe Mode badge in UI
+
+
+
+---
+
+2.2 Improved Extra Args Parsing
+
+[ ] Build a mini argument tokenizer (supports quotes)
+
+[ ] Replace .split(" ") in server launch
+
+
+
+---
+
+2.3 UI Enhancements
+
+[ ] DiagnosticsOverlay: display LLM mem + system mem
+
+[ ] StatusMenuView: live TPS, ctx, mem, thermal
+
+[ ] Add “Reset to Safe Defaults” button to Advanced Settings
+
+
+
+---
+
+🟩 TIER 3 — Future Improvements / Nice-to-Have
+
+3.1 Intelligent Benchmarking
+
+[ ] Benchmark 3 modes per model:
+
+Fast Mode
+
+Balanced
+
+Deep Context
+
+
+[ ] Store TPS per configuration in ModelIndexService
+
+
+
+---
+
+3.2 Auto Model Routing
+
+[ ] Add “Primary Coding Model” selector
+
+[ ] Use coding model when starting server for coding tasks
+
+[ ] Allow a separate “General Chat” model
+
+
+
+---
+
+3.3 RoPE Scaling Rules Per Model
+
+[ ] Auto-enable RoPE scaling for models containing “128k” in filename
+
+[ ] Provide warning if user disables scaling on such models
+
+
+
+---
+
+✔️ Done — You Now Have a Production-Ready Task List
+
+If you want, I can also:
+
+Convert this into a GitHub Project board
+
+Generate a Kanban swimlane version
+
+Generate a Jira-friendly EPIC + issues
+
+Or format for Notion, Linear, or Xcode TODO comments
+
+
+Would you like one of those versions?

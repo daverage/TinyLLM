@@ -68,8 +68,7 @@ struct AppSidebar: View {
             .buttonStyle(.bordered)
 
             Button("Refresh Metrics") {
-                manager.updateMetrics()
-                manager.refreshThermalState()
+                manager.requestRuntimeUpdate()
             }
             .buttonStyle(.bordered)
 

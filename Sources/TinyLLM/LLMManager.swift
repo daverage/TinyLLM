@@ -1,6 +1,40 @@
 import Foundation
 import SwiftUI
 
+struct RuntimeMetrics: Equatable {
+    var systemMemPercent: Double?
+    var llmMemPercent: Double?
+    var llmCPUPercent: Double?
+    var thermalState: ThermalState = .nominal
+
+    var systemMemoryDisplay: String {
+        guard let value = systemMemPercent else { return "—" }
+        return Self.formatPercent(value)
+    }
+
+    var llmMemoryDisplay: String {
+        guard let value = llmMemPercent else { return "—" }
+        return Self.formatPercent(value)
+    }
+
+    var llmCPUDisplay: String {
+        guard let value = llmCPUPercent else { return "—" }
+        return Self.formatPercent(value)
+    }
+
+    var memorySummary: String {
+        let system = systemMemoryDisplay
+        if let llm = llmMemPercent {
+            return "\(system) · LLM \(Self.formatPercent(llm))"
+        }
+        return system
+    }
+
+    private static func formatPercent(_ value: Double) -> String {
+        String(format: "%.1f%%", value)
+    }
+}
+
 enum ServerHealthState: String {
     case stopped
     case starting
@@ -16,8 +50,94 @@ enum MemoryPressureLevel: String {
     case critical
 }
 
+private extension MemoryPressureLevel {
+    var severity: Int {
+        switch self {
+        case .low: return 0
+        case .moderate: return 1
+        case .high: return 2
+        case .critical: return 3
+        }
+    }
+}
+
+enum GPUAggressiveness: String, CaseIterable, Identifiable {
+    case low
+    case balanced
+    case high
+    case max
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .low: return "Low"
+        case .balanced: return "Balanced"
+        case .high: return "High"
+        case .max: return "Max"
+        }
+    }
+
+    var index: Int {
+        switch self {
+        case .low: return 0
+        case .balanced: return 1
+        case .high: return 2
+        case .max: return 3
+        }
+    }
+}
+
+enum HostPerformanceProfile: String, CaseIterable, Identifiable {
+    case quiet
+    case balanced
+    case performance
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .quiet: return "Quiet"
+        case .balanced: return "Balanced"
+        case .performance: return "Performance"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .quiet:
+            return "Lower threads/GPU/batch for minimal host impact."
+        case .balanced:
+            return "Current defaults tuned for stability."
+        case .performance:
+            return "Maximize throughput with aggressive batching."
+        }
+    }
+}
+
+enum LogDisplayMode: String, CaseIterable, Identifiable {
+    case host
+    case server
+    case combined
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .host: return "Host"
+        case .server: return "Server"
+        case .combined: return "Combined"
+        }
+    }
+}
+
 @MainActor
 final class LLMManager: ObservableObject {
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
     
     // MARK: - Services
     private let processService = ProcessService()
@@ -39,7 +159,8 @@ final class LLMManager: ObservableObject {
     var buildDir: URL { llamaCPPDir.appendingPathComponent("build", conformingTo: .directory) }
     var serverBinary: URL { llamaCPPDir.appendingPathComponent("build/bin/llama-server") }
     var modelsDir: URL { appSupportRoot.appendingPathComponent("models", conformingTo: .directory) }
-    var logFile: URL { appSupportRoot.appendingPathComponent("llama-server.log") }
+    var serverLogFile: URL { appSupportRoot.appendingPathComponent("llama-server.log") }
+    var hostLogFile: URL { appSupportRoot.appendingPathComponent("tinyllm.log") }
     
     // MARK: - Defaults Keys
     struct DefaultsKey {
@@ -65,6 +186,9 @@ final class LLMManager: ObservableObject {
         static let autoThrottleMemory = "TinyLLM.autoThrottleMemory"
         static let autoReduceRuntimeOnPressure = "TinyLLM.autoReduceRuntimeOnPressure"
         static let autoSwitchQuantOnPressure = "TinyLLM.autoSwitchQuantOnPressure"
+        static let debugMode = "TinyLLM.debugMode"
+        static let gpuAggressiveness = "TinyLLM.gpuAggressiveness"
+        static let performanceProfile = "TinyLLM.performanceProfile"
     }
     
     // MARK: - Published Config
@@ -73,12 +197,23 @@ final class LLMManager: ObservableObject {
     @Published var ctxSize: Int = 32768 { didSet { persist(ctxSize, for: DefaultsKey.ctxSize) } }
     @Published var batchSize: Int = 512 { didSet { persist(batchSize, for: DefaultsKey.batchSize) } }
     @Published var nGpuLayers: Int = 80 { didSet { persist(nGpuLayers, for: DefaultsKey.nGpuLayers) } }
+    @Published var gpuAggressiveness: GPUAggressiveness = .balanced {
+        didSet { persist(gpuAggressiveness.rawValue, for: DefaultsKey.gpuAggressiveness) }
+    }
+    @Published var hostPerformanceProfile: HostPerformanceProfile = .balanced {
+        didSet {
+            persist(hostPerformanceProfile.rawValue, for: DefaultsKey.performanceProfile)
+            guard !isRestoringSettings else { return }
+            applyPerformanceProfile(hostPerformanceProfile)
+        }
+    }
     @Published var threadCount: Int = 4 { didSet { persist(threadCount, for: DefaultsKey.threadCount) } }
     
     // Advanced Config
     @Published var cacheTypeK: String = "q4_0" { didSet { persist(cacheTypeK, for: DefaultsKey.cacheK) } }
     @Published var cacheTypeV: String = "q4_0" { didSet { persist(cacheTypeV, for: DefaultsKey.cacheV) } }
     @Published var enableFlashAttention: Bool = false { didSet { persist(enableFlashAttention, for: DefaultsKey.enableFlash) } }
+    @Published var flashAttentionSupported: Bool = false
     @Published var enableRopeScaling: Bool = false { didSet { persist(enableRopeScaling, for: DefaultsKey.enableRopeScaling) } }
     @Published var ropeScalingValue: Double = 1.0 { didSet { persist(ropeScalingValue, for: DefaultsKey.ropeScalingValue) } }
     @Published var enableAutoKV: Bool = true { didSet { persist(enableAutoKV, for: DefaultsKey.enableAutoKV) } }
@@ -105,11 +240,16 @@ final class LLMManager: ObservableObject {
     @Published var isRunning = false
     @Published var statusText: String = "Idle"
     @Published var logTail: String = ""
-    @Published var cpuPercent: String = "-"
-    @Published var memPercent: String = "-"
+    @Published var logDisplayMode: LogDisplayMode = .host {
+        didSet {
+            Task {
+                await performLogTailUpdate()
+            }
+        }
+    }
+    @Published private(set) var runtimeMetrics = RuntimeMetrics()
     @Published var hardwareSummary: String = "Detecting…"
     @Published var gpuSummary: String = "Detecting…"
-    @Published var thermalState: ThermalState = .nominal
     
     @Published var healthState: ServerHealthState = .stopped
     @Published var healthNote: String = "Idle"
@@ -119,22 +259,40 @@ final class LLMManager: ObservableObject {
     @Published var currentRecommendedSettings: RecommendedSettings?
     @Published var effectiveCtxSize: Int = 32768
     @Published var contextWarning: String? = nil
-    @Published var debugMode: Bool = false
+    @Published var debugMode: Bool = false {
+        didSet {
+            persist(debugMode, for: DefaultsKey.debugMode)
+            if debugMode {
+                appendLog("Debug mode enabled", level: .info)
+            } else {
+                appendLog("Debug mode disabled", level: .info)
+            }
+        }
+    }
     @Published var lastBuildDurationSeconds: Double? = nil
     
     // Helpers
-    private var logMonitor: DispatchSourceFileSystemObject?
+    private var hostLogMonitor: DispatchSourceFileSystemObject?
+    private var serverLogMonitor: DispatchSourceFileSystemObject?
+    private var logTailUpdateTask: Task<Void, Never>?
+    private var logTailUpdatePending = false
+    private let logTailThrottleInterval: UInt64 = 200_000_000
+    private let logTailReadBytes: UInt64 = 32 * 1024
     private let logWriteQueue = DispatchQueue(label: "TinyLLM.logWriter", qos: .utility)
 
-    private var healthTask: Task<Void, Never>?
+    private var runtimeTask: Task<Void, Never>?
     private var isBatchPersistingSettings = false
     private var lastLogTimestamp: Date?
     private var lastKnownPID: Int32?
     private var lastMemoryWarning: Date?
+    private var highMemoryPressureDetectedAt: Date?
+    private let memoryPressureGracePeriod: TimeInterval = 6.0
     private var lastAutoThrottleTimestamp: Date?
     private var lastAutoRuntimeThrottleTimestamp: Date?
     private var lastAutoQuantSwitchTimestamp: Date?
     private let autoMemoryCooldown: TimeInterval = 60
+    private var startupSafeFallbackApplied = false
+    private var isApplyingPerformanceProfile = false
     
     // System Specs Cache
     private var ramGB: Int = 0
@@ -142,6 +300,9 @@ final class LLMManager: ObservableObject {
     
     var openAIApiBase: String { "http://\(host):\(port)/v1" }
     var maxThreadCount: Int { ProcessInfo.processInfo.activeProcessorCount }
+    var recommendedGpuLayerBase: Int {
+        recommendedGpuLayerBase(for: max(ramGB, 8), sizeB: estimatedBillions(for: selectedModel), aggressiveness: gpuAggressiveness)
+    }
     
     // Presets
     let presets: [Preset] = [
@@ -159,18 +320,22 @@ final class LLMManager: ObservableObject {
         loadSettings()
         isRestoringSettings = false
         
-        ensureLogFile()
+        ensureLogFiles()
         startLogMonitor()
-        startHealthMonitoring()
+        startRuntimeMonitoring()
         refreshModels()
         
         Task {
             // Detect hardware async, then update UI
-            let specs = await HardwareService.detectSpecs()
+            let specs = await HardwareService.detectSpecs(serverBinary: serverBinary)
             self.ramGB = specs.ramGB
             self.chipFamily = specs.chipFamily
             self.hardwareSummary = "Chip: \(specs.chipFamily.rawValue), RAM: \(specs.ramGB) GB"
             self.gpuSummary = specs.gpuName
+            self.flashAttentionSupported = specs.supportsFlashAttention
+            if !specs.supportsFlashAttention {
+                self.enableFlashAttention = false
+            }
             
             // Validate thread count
             if self.threadCount == 0 {
@@ -186,6 +351,7 @@ final class LLMManager: ObservableObject {
                 if self.autoApplyRecommended {
                     self.applyRecommended(rec)
                 }
+                self.applyPerformanceProfile(self.hostPerformanceProfile)
             }
         }
     }
@@ -200,19 +366,37 @@ final class LLMManager: ObservableObject {
 
     private func refreshModelsAsync() async {
         try? FileManager.default.createDirectory(at: modelsDir, withIntermediateDirectories: true)
+
+        appendDebugLog("Refreshing models from: \(modelsDir.path)")
+
         var models: [LLMModel] = []
         if let contents = try? FileManager.default.contentsOfDirectory(at: modelsDir, includingPropertiesForKeys: nil) {
-            models = contents
-                .filter { $0.pathExtension.lowercased() == "gguf" }
+            appendDebugLog("Found \(contents.count) files in models directory")
+
+            let ggufFiles = contents.filter { $0.pathExtension.lowercased() == "gguf" }
+            appendDebugLog("Found \(ggufFiles.count) .gguf files")
+
+            models = ggufFiles
                 .map { LLMModel(filename: $0.lastPathComponent, fullPath: $0) }
                 .sorted { $0.filename < $1.filename }
+
+            for model in models {
+                appendDebugLog("  - \(model.filename)")
+            }
+        } else {
+            appendDebugLog("Failed to read models directory")
         }
 
         availableModels = models
+        appendDebugLog("Updated availableModels to \(models.count) items")
+
         await updateModelIndexEntries(with: models)
 
         if selectedModel == nil || !availableModels.contains(where: { $0.filename == selectedModel?.filename }) {
             selectedModel = availableModels.first
+            if let first = availableModels.first {
+                appendDebugLog("Auto-selected model: \(first.filename)")
+            }
         }
     }
 
@@ -246,19 +430,31 @@ final class LLMManager: ObservableObject {
         let resolvedCtx = resolveContextPlan(sizeB: sizeB)
         effectiveCtxSize = resolvedCtx.value
         contextWarning = resolvedCtx.warning
-        
+
+        // Adaptive batch size based on memory pressure and thermal state
+        let adaptiveBatch = computeAdaptiveBatchSize(baseBatch: batchSize)
+
+        // Thermal-aware GPU layer reduction
+        let recommendedGpuBase = recommendedGpuLayerBase(for: max(ramGB, 8), sizeB: sizeB, aggressiveness: gpuAggressiveness)
+        let baseGpu = min(nGpuLayers, recommendedGpuBase)
+        let adaptiveGpuLayers = computeAdaptiveGpuLayers(baseGpu: baseGpu)
+
+        let cacheFromCtx = max(128, resolvedCtx.value / 4)
+        let cacheRamMB = min(max(ramGB, 8) * 256, cacheFromCtx)
+
         // Args
         var args: [String] = [
             "-m", model.fullPath.path,
             "--host", host, "--port", String(port),
-            "--n-gpu-layers", String(nGpuLayers),
+            "--n-gpu-layers", String(adaptiveGpuLayers),
             "--ctx-size", String(resolvedCtx.value),
-            "--batch-size", String(batchSize),
+            "--batch-size", String(adaptiveBatch),
             "--threads", String(threadCount),
             "--temp", String(format: "%.2f", profile.temp),
             "--top-p", String(format: "%.2f", profile.topP),
             "--cache-type-k", cacheTypeK,
-            "--cache-type-v", cacheTypeV
+            "--cache-type-v", cacheTypeV,
+            "--cache-ram", String(cacheRamMB)
         ]
         
         if enableFlashAttention { args.append(contentsOf: ["--flash-attn", "on"]) }
@@ -275,7 +471,7 @@ final class LLMManager: ObservableObject {
         
         Task {
             do {
-                let pid = try await processService.startAsync(executable: serverBinary, args: args, outputToFile: logFile)
+                let pid = try await processService.startAsync(executable: serverBinary, args: args, outputToFile: serverLogFile)
                 isRunning = true
                 statusText = "Running \(model.filename)"
                 didStartServer(pid: pid)
@@ -338,7 +534,7 @@ final class LLMManager: ObservableObject {
                     executable: "/usr/bin/cmake",
                     args: cmakeArgs,
                     currentDir: llamaCPPDir,
-                    outputToFile: logFile
+                    outputToFile: serverLogFile
                 )
                 guard cmakeCode == 0 else {
                     statusText = "CMake failed (\(cmakeCode))"
@@ -350,7 +546,7 @@ final class LLMManager: ObservableObject {
                     executable: "/usr/bin/cmake",
                     args: ["--build", "build", "--config", "Release", "-j", "\(maxThreadCount)"],
                     currentDir: llamaCPPDir,
-                    outputToFile: logFile
+                    outputToFile: serverLogFile
                 )
                 guard buildCode == 0 else {
                     statusText = "Build failed (\(buildCode))"
@@ -384,7 +580,7 @@ final class LLMManager: ObservableObject {
                 executable: "/usr/bin/git",
                 args: ["clone", "https://github.com/ggerganov/llama.cpp", "llama.cpp"],
                 currentDir: appSupportRoot,
-                outputToFile: logFile
+                outputToFile: serverLogFile
             )
         }
     }
@@ -415,16 +611,28 @@ final class LLMManager: ObservableObject {
                 let code = try await processService.runSync(
                     executable: "/usr/bin/curl",
                     args: ["-L", "--progress-bar", "-o", dest.path, urlStr],
-                    outputToFile: logFile
+                    outputToFile: serverLogFile
                 )
                 if code == 0 {
+                    appendLog("Download completed: \(dest.path)")
+                    let fileExists = FileManager.default.fileExists(atPath: dest.path)
+                    appendLog("File exists after download: \(fileExists)")
+
+                    if fileExists {
+                        if let attrs = try? FileManager.default.attributesOfItem(atPath: dest.path),
+                           let size = attrs[.size] as? Int64 {
+                            appendLog("Downloaded file size: \(size) bytes")
+                        }
+                    }
+
+                    await refreshModelsAsync()
                     await MainActor.run {
-                        refreshModels()
                         statusText = "Downloaded \(filename)"
                     }
                 } else {
                     await MainActor.run {
-                        statusText = "Download failed"
+                        statusText = "Download failed (exit code: \(code))"
+                        appendLog("Download failed with exit code: \(code)", level: .error)
                     }
                 }
             } catch {
@@ -464,37 +672,69 @@ final class LLMManager: ObservableObject {
     }
 
     // MARK: - Metrics
-    func updateMetrics() {
-        // 1. System Memory (Native)
-        memPercent = HardwareService.getMemoryUsagePercent()
-
-        // 2. Process CPU (via actor)
+    func requestRuntimeUpdate() {
         Task {
-            if await processService.isRunning(), let pid = await processService.getPID() {
-                if let metrics = await processService.getProcessMetrics(pid: pid) {
-                    cpuPercent = metrics.cpu
-                    // optionally use process mem instead of system mem
-                }
-            } else {
-                cpuPercent = HardwareService.getCPULoad() // fallback to load avg
-            }
+            await updateRuntimeState()
         }
-        
-        maybeAdjustForMemory()
     }
 
-    func refreshThermalState() {
-        Task {
-            let state = ThermalService.readThermalState()
-            await MainActor.run {
-                thermalState = state
+    @MainActor
+    private func updateRuntimeState() async {
+        let systemMemoryPercent = percentValue(from: HardwareService.getMemoryUsagePercent())
+        var newMetrics = runtimeMetrics
+        newMetrics.systemMemPercent = systemMemoryPercent
+        newMetrics.thermalState = ThermalService.readThermalState()
+
+        var pid: Int32?
+        var processMetrics: ProcessMetrics?
+
+        if await processService.isRunning(), let runningPID = await processService.getPID() {
+            pid = runningPID
+            if let snapshot = await processService.getProcessMetrics(pid: runningPID) {
+                newMetrics.llmCPUPercent = percentValue(from: snapshot.cpuPercent)
+                newMetrics.llmMemPercent = percentValue(from: snapshot.memPercent)
+                processMetrics = snapshot
+            } else {
+                newMetrics.llmCPUPercent = nil
+                newMetrics.llmMemPercent = nil
             }
+        } else {
+            newMetrics.llmCPUPercent = nil
+            newMetrics.llmMemPercent = nil
         }
+
+        runtimeMetrics = newMetrics
+        maybeAdjustForMemory()
+        applyStartupSafeFallbackIfNeeded()
+        await pollHealth(pid: pid, metrics: processMetrics)
     }
     
     var memoryPressure: MemoryPressureLevel {
-        let stripped = memPercent.replacingOccurrences(of: "%", with: "")
-        let used = Double(stripped) ?? 0
+        let systemLevel = memoryPressureLevel(forSystem: runtimeMetrics.systemMemPercent)
+        let llmLevel = memoryPressureLevel(forLLM: runtimeMetrics.llmMemPercent)
+        return systemLevel.severity >= llmLevel.severity ? systemLevel : llmLevel
+    }
+    
+    private func maybeAdjustForMemory() {
+        switch memoryPressure {
+        case .low, .moderate:
+            highMemoryPressureDetectedAt = nil
+        case .high, .critical:
+            let now = Date()
+            if let last = lastMemoryWarning, now.timeIntervalSince(last) < 60 {
+                break
+            }
+            lastMemoryWarning = now
+            appendLog("High memory pressure detected (\(runtimeMetrics.memorySummary)). Consider reducing context size, batch size, or choosing a smaller model.", level: .info)
+        }
+
+        if shouldTriggerAutoMemoryActions() {
+            handleAutoMemoryActions()
+        }
+    }
+
+    private func memoryPressureLevel(forSystem value: Double?) -> MemoryPressureLevel {
+        guard let used = value else { return .low }
         switch used {
         case ..<60: return .low
         case 60..<75: return .moderate
@@ -502,25 +742,61 @@ final class LLMManager: ObservableObject {
         default: return .critical
         }
     }
-    
-    private func maybeAdjustForMemory() {
-        switch memoryPressure {
-        case .low, .moderate:
-            break
-        case .high, .critical:
-            let now = Date()
-            if let last = lastMemoryWarning, now.timeIntervalSince(last) < 60 {
-                break
-            }
-            lastMemoryWarning = now
-            appendLog("High memory pressure detected (\(memPercent)). Consider reducing context size, batch size, or choosing a smaller model.", level: .info)
+
+    private func memoryPressureLevel(forLLM value: Double?) -> MemoryPressureLevel {
+        guard let used = value else { return .low }
+        switch used {
+        case ..<15: return .low
+        case 15..<25: return .moderate
+        case 25..<35: return .high
+        default: return .critical
+        }
+    }
+
+    private func applyStartupSafeFallbackIfNeeded() {
+        guard !startupSafeFallbackApplied, !manualContextOverride else { return }
+        guard memoryPressure == .high || memoryPressure == .critical else { return }
+
+        startupSafeFallbackApplied = true
+        let safePlan = planContextSize(desired: 16384, sizeB: estimatedBillions(for: selectedModel))
+        let safeCtx = max(4096, min(ctxSize, safePlan.value))
+        ctxSize = safeCtx
+        batchSize = max(64, min(batchSize, 256))
+        nGpuLayers = max(16, min(nGpuLayers, 32))
+        contextWarning = "High memory pressure at launch forced safer context/batch defaults."
+        appendLog("Startup fallback: ctx \(ctxSize), batch \(batchSize), GPU \(nGpuLayers) due to high pressure.", level: .info)
+    }
+
+    private func shouldTriggerAutoMemoryActions() -> Bool {
+        guard autoThrottleMemory || autoReduceRuntimeOnPressure || autoSwitchQuantOnPressure else {
+            highMemoryPressureDetectedAt = nil
+            return false
         }
 
-        handleAutoMemoryActions()
+        switch memoryPressure {
+        case .high, .critical:
+            let now = Date()
+            if let start = highMemoryPressureDetectedAt {
+                if now.timeIntervalSince(start) >= memoryPressureGracePeriod {
+                    highMemoryPressureDetectedAt = now
+                    return true
+                }
+                return false
+            } else {
+                highMemoryPressureDetectedAt = now
+                return false
+            }
+        default:
+            highMemoryPressureDetectedAt = nil
+            return false
+        }
     }
 
     private func handleAutoMemoryActions() {
-        appendDebugLog("Memory pressure \(memoryPressure.rawValue), autoThrottle=\(autoThrottleMemory), autoReduce=\(autoReduceRuntimeOnPressure), autoSwitch=\(autoSwitchQuantOnPressure)")
+        // Only run auto-memory actions if server is running
+        guard isRunning else { return }
+
+        appendDebugLog("Memory pressure \(memoryPressure.rawValue) (\(runtimeMetrics.memorySummary)), autoThrottle=\(autoThrottleMemory), autoReduce=\(autoReduceRuntimeOnPressure), autoSwitch=\(autoSwitchQuantOnPressure)")
         guard memoryPressure == .high || memoryPressure == .critical else { return }
         if autoReduceRuntimeIfNeeded() { return }
         if autoSwitchQuantVariantIfNeeded() { return }
@@ -630,13 +906,13 @@ final class LLMManager: ObservableObject {
         return true
     }
     
-    func startHealthMonitoring() {
-        healthTask?.cancel()
-        healthTask = Task.detached { [weak self] in
+    private func startRuntimeMonitoring() {
+        stopRuntimeMonitoring()
+        runtimeTask = Task { [weak self] in
             while !Task.isCancelled {
-                await self?.pollHealth()
+                await self?.updateRuntimeState()
                 do {
-                    try await Task.sleep(nanoseconds: 5_000_000_000)
+                    try await Task.sleep(nanoseconds: 3_000_000_000)
                 } catch {
                     break
                 }
@@ -644,16 +920,14 @@ final class LLMManager: ObservableObject {
         }
     }
     
-    func stopHealthMonitoring() {
-        healthTask?.cancel()
-        healthTask = nil
+    func stopRuntimeMonitoring() {
+        runtimeTask?.cancel()
+        runtimeTask = nil
     }
     
-    private func pollHealth() async {
-        // If server is not supposed to be running, reflect that.
+    private func pollHealth(pid: Int32?, metrics: ProcessMetrics?) async {
         if !(await processService.isRunning()) {
             if isRunning {
-                // Unexpected stop
                 healthState = .crashed
                 healthNote = "Server not running (unexpected)"
                 isRunning = false
@@ -664,23 +938,29 @@ final class LLMManager: ObservableObject {
             return
         }
         
-        if let pid = await processService.getPID(),
-           let metrics = await processService.getProcessMetrics(pid: pid) {
-            lastKnownPID = pid
-            let cpuString = metrics.cpu.trimmingCharacters(in: .whitespacesAndNewlines)
-            let cpuValue = Double(cpuString.replacingOccurrences(of: "%", with: "")) ?? 0
-            let lastLogAge = lastLogTimestamp.map { Date().timeIntervalSince($0) } ?? .infinity
-            
-            if cpuValue < 1.0 && lastLogAge > 60 {
-                healthState = .degraded
-                healthNote = "Possible stall: no log activity for \(Int(lastLogAge))s, CPU \(metrics.cpu)"
-            } else {
-                healthState = .healthy
-                healthNote = "Server OK (\(metrics.cpu) CPU, mem \(memPercent))"
-            }
-        } else {
+        guard let pid = pid else {
+            healthState = .degraded
+            healthNote = "Server running but PID missing"
+            return
+        }
+
+        guard let metrics = metrics else {
             healthState = .degraded
             healthNote = "Unable to read server metrics"
+            return
+        }
+
+        lastKnownPID = pid
+        let cpuString = metrics.cpuPercent.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cpuValue = Double(cpuString.replacingOccurrences(of: "%", with: "")) ?? 0
+        let lastLogAge = lastLogTimestamp.map { Date().timeIntervalSince($0) } ?? .infinity
+        
+        if cpuValue < 1.0 && lastLogAge > 60 {
+            healthState = .degraded
+            healthNote = "Possible stall: no log activity for \(Int(lastLogAge))s, CPU \(metrics.cpuPercent)"
+        } else {
+            healthState = .healthy
+            healthNote = "Server OK (CPU \(metrics.cpuPercent), mem \(runtimeMetrics.memorySummary))"
         }
     }
     
@@ -700,10 +980,24 @@ final class LLMManager: ObservableObject {
     private func finalizeServerStop(statusNote: String?, intentional: Bool) {
         isRunning = false
         statusText = statusNote ?? "Stopped"
-        cpuPercent = "-"
-        memPercent = "-"
+        clearProcessMetrics()
         didStopServer(intentional: intentional)
         appendLog("Server stopped.")
+    }
+
+    private func clearProcessMetrics() {
+        var refreshed = runtimeMetrics
+        refreshed.llmCPUPercent = nil
+        refreshed.llmMemPercent = nil
+        runtimeMetrics = refreshed
+    }
+
+    private func percentValue(from text: String) -> Double? {
+        let cleaned = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "%", with: "")
+        guard !cleaned.isEmpty else { return nil }
+        return Double(cleaned)
     }
     
     // MARK: - Planning Logic (Business Logic)
@@ -715,6 +1009,7 @@ final class LLMManager: ObservableObject {
             applyRecommended(rec)
         }
         refreshRuntimePlanner()
+        applyPerformanceProfile(hostPerformanceProfile)
     }
 
     func applyRecommendedSettings() {
@@ -748,6 +1043,7 @@ final class LLMManager: ObservableObject {
             DefaultsKey.enableFlash: rec.flash,
             DefaultsKey.threadCount: rec.threads,
         ])
+        applyPerformanceProfile(hostPerformanceProfile)
     }
     
     func recommendedSettings(for model: LLMModel?) -> RecommendedSettings {
@@ -760,24 +1056,31 @@ final class LLMManager: ObservableObject {
         let threads = max(1, ProcessInfo.processInfo.activeProcessorCount - 2)
         
         if ram <= 8 {
-            ctx = sizeB <= 4 ? 8192 : 4096
+            ctx = sizeB <= 4 ? 16384 : 8192
             batch = 256
-            nGpu = sizeB <= 4 ? 48 : 28
             flash = false
         } else if ram <= 16 {
-            ctx = 32768
+            // For 16GB, use higher context on M3/M4 with efficient unified memory
+            let isModernChip = (chipFamily == .m3 || chipFamily == .m4)
+            ctx = isModernChip && sizeB <= 7 ? 49152 : 32768
             batch = 512
-            nGpu = sizeB <= 7 ? 999 : 64
             cK = "q4_1"
             cV = "q4_1"
         } else {
-            ctx = 32768
+            let isModernChip = (chipFamily == .m3 || chipFamily == .m4)
+            if ram < 32 {
+                ctx = isModernChip ? 98304 : 65536
+            } else {
+                ctx = isModernChip ? 131072 : 98304
+            }
             batch = 1024
-            nGpu = 999
             cK = "q5_0"
             cV = "q5_0"
         }
         
+        let recommendedGpu = recommendedGpuLayerBase(for: ram, sizeB: sizeB, aggressiveness: gpuAggressiveness)
+        nGpu = recommendedGpu
+
         let cPlan = planContextSize(desired: ctx, sizeB: sizeB)
         let summary = "ctx=\(cPlan.value), gpu=\(nGpu), KV=\(cK)/\(cV)"
         let note = plannerNote(sizeB: sizeB, ram: ram, chip: chipFamily, ctx: cPlan.value, batch: batch, nGpu: nGpu, cacheK: cK, cacheV: cV, flash: flash, warning: cPlan.warning)
@@ -822,12 +1125,131 @@ final class LLMManager: ObservableObject {
         return 7.0
     }
     
+    private func computeAdaptiveBatchSize(baseBatch: Int) -> Int {
+        var adaptedBatch = baseBatch
+
+        // Reduce batch size under memory pressure
+        switch memoryPressure {
+        case .low, .moderate:
+            break
+        case .high:
+            adaptedBatch = max(128, Int(Double(adaptedBatch) * 0.75))
+        case .critical:
+            adaptedBatch = max(64, Int(Double(adaptedBatch) * 0.5))
+        }
+
+        // Further reduce under thermal stress
+        switch runtimeMetrics.thermalState {
+        case .nominal, .moderate:
+            break
+        case .heavy:
+            adaptedBatch = max(64, Int(Double(adaptedBatch) * 0.75))
+            appendDebugLog("Thermal state heavy: reduced batch to \(adaptedBatch)")
+        case .hotspot:
+            adaptedBatch = max(64, Int(Double(adaptedBatch) * 0.5))
+            appendDebugLog("Thermal state hotspot: reduced batch to \(adaptedBatch)")
+        }
+
+        return adaptedBatch
+    }
+
+    private func computeAdaptiveGpuLayers(baseGpu: Int) -> Int {
+        // Reduce GPU layer offloading under thermal stress to decrease Metal workload
+        switch runtimeMetrics.thermalState {
+        case .nominal:
+            return baseGpu
+        case .moderate:
+            return baseGpu
+        case .heavy:
+            let reduced = max(32, Int(Double(baseGpu) * 0.66))
+            if reduced != baseGpu {
+                appendDebugLog("Thermal state heavy: reduced GPU layers from \(baseGpu) to \(reduced)")
+            }
+            return reduced
+        case .hotspot:
+            let reduced = max(16, Int(Double(baseGpu) * 0.33))
+            if reduced != baseGpu {
+                appendDebugLog("Thermal state hotspot: reduced GPU layers from \(baseGpu) to \(reduced)")
+            }
+            return reduced
+        }
+    }
+
     private func planContextSize(desired: Int, sizeB: Double) -> (value: Int, warning: String?) {
         let ram = max(ramGB, 8)
-        let ceiling = ram <= 8 ? (sizeB <= 4 ? 16384 : 8192) : (ram <= 16 ? 32768 : 65536)
+        let ceiling = contextCeiling(for: ram, sizeB: sizeB)
         let val = min(desired, ceiling)
         let warn = desired > ceiling ? "Requested ctx \(desired) > safe ceiling \(ceiling) for ~\(sizeB)B on \(ram)GB. Using \(val)." : nil
         return (val, warn)
+    }
+
+    private func applyPerformanceProfile(_ profile: HostPerformanceProfile) {
+        guard !isApplyingPerformanceProfile else { return }
+        isApplyingPerformanceProfile = true
+        defer { isApplyingPerformanceProfile = false }
+
+        let rec = recommendedSettings(for: selectedModel)
+        let sizeB = estimatedBillions(for: selectedModel)
+        let recommendedGpu = recommendedGpuLayerBase(for: max(ramGB, 8), sizeB: sizeB, aggressiveness: gpuAggressiveness)
+        let baseGpu = max(rec.nGpu, 16)
+
+        switch profile {
+        case .quiet:
+            threadCount = max(1, min(rec.threads, 4))
+            batchSize = max(64, rec.batch / 2)
+            nGpuLayers = max(16, min(baseGpu, recommendedGpu / 2))
+        case .balanced:
+            threadCount = rec.threads
+            batchSize = rec.batch
+            nGpuLayers = rec.nGpu
+        case .performance:
+            threadCount = maxThreadCount
+            batchSize = min(4096, max(rec.batch * 2, 256))
+            nGpuLayers = min(999, max(baseGpu, recommendedGpu))
+        }
+    }
+
+    private func contextCeiling(for ram: Int, sizeB: Double) -> Int {
+        let clampedRam = max(ram, 8)
+        let isModernChip = (chipFamily == .m3 || chipFamily == .m4)
+
+        switch clampedRam {
+        case ...8:
+            return sizeB <= 4 ? 16384 : 8192
+        case ...16:
+            if sizeB > 7 {
+                return 32768
+            }
+            return isModernChip ? 49152 : 32768
+        case 17...31:
+            return isModernChip ? 98304 : 65536
+        default:
+            return 131072
+        }
+    }
+
+    private func recommendedGpuLayerBase(for ram: Int, sizeB: Double, aggressiveness: GPUAggressiveness) -> Int {
+        let clampedRam = max(ram, 8)
+        let index = aggressiveness.index
+
+        switch clampedRam {
+        case ...8:
+            let values = [30, 40, 50, 60]
+            let base = values[index]
+            if sizeB > 7 {
+                return max(20, base - 10)
+            }
+            return base
+        case ...16:
+            let values = [80, 100, 110, 120]
+            return values[index]
+        case 17...31:
+            let values = [120, 140, 160, 180]
+            return values[index]
+        default:
+            let values = [256, 512, 768, 999]
+            return values[index]
+        }
     }
     
     private func modelAlias(for model: LLMModel) -> String {
@@ -836,9 +1258,11 @@ final class LLMManager: ObservableObject {
     }
     
     // MARK: - Logging Utils
-    private func ensureLogFile() {
-        if !FileManager.default.fileExists(atPath: logFile.path) {
-            FileManager.default.createFile(atPath: logFile.path, contents: nil)
+    private func ensureLogFiles() {
+        for file in [hostLogFile, serverLogFile] {
+            if !FileManager.default.fileExists(atPath: file.path) {
+                FileManager.default.createFile(atPath: file.path, contents: nil)
+            }
         }
     }
     
@@ -851,9 +1275,9 @@ final class LLMManager: ObservableObject {
     private func appendLog(_ message: String, level: LogLevel = .info) {
         guard level != .debug || debugMode else { return }
         lastLogTimestamp = Date()
-        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let timestamp = Self.isoFormatter.string(from: Date())
         let line = "[\(timestamp)] [\(level.rawValue)] \(message)\n"
-        let logTarget = logFile
+        let logTarget = hostLogFile
         logWriteQueue.async {
             do {
                 let handle = try FileHandle(forWritingTo: logTarget)
@@ -873,26 +1297,98 @@ final class LLMManager: ObservableObject {
     }
     
     private func startLogMonitor() {
-        let fd = open(logFile.path, O_EVTONLY)
-        guard fd >= 0 else { return }
+        stopLogMonitor()
+        hostLogMonitor = makeLogMonitor(for: hostLogFile)
+        serverLogMonitor = makeLogMonitor(for: serverLogFile)
+        scheduleLogTailUpdate()
+    }
+
+    private func stopLogMonitor() {
+        hostLogMonitor?.cancel()
+        hostLogMonitor = nil
+        serverLogMonitor?.cancel()
+        serverLogMonitor = nil
+    }
+
+    private func makeLogMonitor(for file: URL) -> DispatchSourceFileSystemObject? {
+        let fd = open(file.path, O_EVTONLY)
+        guard fd >= 0 else { return nil }
         let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.write, .extend], queue: .main)
-        source.setEventHandler { [weak self] in self?.updateLogTail() }
+        source.setEventHandler { [weak self] in
+            self?.scheduleLogTailUpdate()
+        }
         source.setCancelHandler { close(fd) }
-        logMonitor = source
         source.resume()
+        return source
     }
     
-    private func updateLogTail() {
-        guard let handle = try? FileHandle(forReadingFrom: logFile) else { return }
+    private func scheduleLogTailUpdate() {
+        logTailUpdatePending = true
+        guard logTailUpdateTask == nil else { return }
+        logTailUpdateTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self = self else { return }
+                if !self.logTailUpdatePending { break }
+                self.logTailUpdatePending = false
+                do {
+                    try await Task.sleep(nanoseconds: self.logTailThrottleInterval)
+                } catch {
+                    break
+                }
+                await self.performLogTailUpdate()
+            }
+            await MainActor.run {
+                self?.logTailUpdateTask = nil
+            }
+        }
+    }
+
+    @MainActor
+    private func performLogTailUpdate() async {
+        let hostTail = readLastLines(from: hostLogFile)
+        let serverTail = readLastLines(from: serverLogFile)
+
+        switch logDisplayMode {
+        case .host:
+            logTail = hostTail
+        case .server:
+            logTail = serverTail
+        case .combined:
+            var combined: [String] = []
+            if !hostTail.isEmpty {
+                combined.append("=== Host ===")
+                combined.append(hostTail)
+            }
+            if !serverTail.isEmpty {
+                combined.append("=== Server ===")
+                combined.append(serverTail)
+            }
+            logTail = combined.joined(separator: "\n")
+        }
+
+        lastLogTimestamp = Date()
+    }
+
+    private func readLastLines(from file: URL) -> String {
+        guard let handle = try? FileHandle(forReadingFrom: file) else { return "" }
         defer { try? handle.close() }
-        let tailBytes: UInt64 = 64 * 1024
         let fileSize = (try? handle.seekToEnd()) ?? 0
-        let readOffset = fileSize > tailBytes ? fileSize - tailBytes : 0
+        let readOffset = fileSize > logTailReadBytes ? fileSize - logTailReadBytes : 0
         try? handle.seek(toOffset: readOffset)
         let data = handle.readDataToEndOfFile()
         let str = String(data: data, encoding: .utf8) ?? ""
-        logTail = str.components(separatedBy: "\n").suffix(100).joined(separator: "\n")
-        lastLogTimestamp = Date()
+        return str.components(separatedBy: "\n").suffix(100).joined(separator: "\n")
+    }
+
+    func clearLogs() {
+        // Truncate the host log file
+        do {
+            try "".write(to: hostLogFile, atomically: true, encoding: .utf8)
+            logTail = ""
+            appendLog("Logs cleared by user")
+        } catch {
+            appendLog("Failed to clear host log file: \(error.localizedDescription)", level: .error)
+        }
     }
 
     // MARK: - Persistence
@@ -927,6 +1423,13 @@ final class LLMManager: ObservableObject {
         if let v = defaults.object(forKey: DefaultsKey.autoThrottleMemory) as? Bool { autoThrottleMemory = v }
         if let v = defaults.object(forKey: DefaultsKey.autoReduceRuntimeOnPressure) as? Bool { autoReduceRuntimeOnPressure = v }
         if let v = defaults.object(forKey: DefaultsKey.autoSwitchQuantOnPressure) as? Bool { autoSwitchQuantOnPressure = v }
+        if let v = defaults.object(forKey: DefaultsKey.debugMode) as? Bool { debugMode = v }
+        if let v = defaults.string(forKey: DefaultsKey.gpuAggressiveness), let mode = GPUAggressiveness(rawValue: v) {
+            gpuAggressiveness = mode
+        }
+        if let v = defaults.string(forKey: DefaultsKey.performanceProfile), let profile = HostPerformanceProfile(rawValue: v) {
+            hostPerformanceProfile = profile
+        }
     }
 
     private func persist<T>(_ value: T?, for key: String) {

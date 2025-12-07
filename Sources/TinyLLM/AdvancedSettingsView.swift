@@ -10,12 +10,13 @@ struct AdvancedSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
-                LazyVGrid(columns: gridColumns, spacing: 20) {
-                    contextSection
-                    gpuSection
-                    kvCacheSection
-                    ropeScalingSection
-                    extraArgsSection
+            LazyVGrid(columns: gridColumns, spacing: 20) {
+                contextSection
+                performanceProfileSection
+                gpuSection
+                kvCacheSection
+                ropeScalingSection
+                extraArgsSection
                     autoMemorySection
                     recommendedSection
                     debugSection
@@ -101,6 +102,25 @@ private extension AdvancedSettingsView {
                 .padding(.top, 4)
         }
     }
+
+    var performanceProfileSection: some View {
+        settingsCard(title: "Performance Profile", icon: "dial.max") {
+            VStack(alignment: .leading, spacing: 12) {
+                Picker("Performance Profile", selection: $manager.hostPerformanceProfile) {
+                    ForEach(HostPerformanceProfile.allCases) { profile in
+                        Text(profile.label).tag(profile)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text(manager.hostPerformanceProfile.detail)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 4)
+        }
+    }
 }
 
 // MARK: - Auto Memory Safeguards
@@ -128,7 +148,13 @@ private extension AdvancedSettingsView {
     var gpuSection: some View {
         settingsCard(title: "GPU Acceleration", icon: "bolt.circle") {
             VStack(alignment: .leading, spacing: 12) {
-                
+                Picker("Aggressiveness", selection: $manager.gpuAggressiveness) {
+                    ForEach(GPUAggressiveness.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 HStack {
                     Text("GPU Layers")
                     Spacer()
@@ -137,9 +163,21 @@ private extension AdvancedSettingsView {
                 Slider(value: Binding(
                     get: { Double(manager.nGpuLayers) },
                     set: { manager.nGpuLayers = Int($0) }
-                ), in: 0...200, step: 1)
-                
+                ), in: 0...999, step: 1)
+
+                Text("Recommended base: \(manager.recommendedGpuLayerBase) layers")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+
                 Toggle("Flash Attention (Metal-optimized)", isOn: $manager.enableFlashAttention)
+                    .disabled(!manager.flashAttentionSupported)
+                
+                if !manager.flashAttentionSupported {
+                    Text("Flash Attention not available on this build.")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 
             }
             .padding(.top, 4)

@@ -8,15 +8,12 @@ final class TinyLLMAppDelegate: NSObject, NSApplicationDelegate {
 
     private var windowController: NSWindowController?
     private var statusItemController: StatusItemController?
-    private var metricsTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
         configureStatusItem()
-        startMetricsTimer()
         Task { @MainActor in
-            manager.updateMetrics()
-            manager.refreshThermalState()
+            manager.requestRuntimeUpdate()
         }
         showMainWindow()
     }
@@ -28,8 +25,7 @@ final class TinyLLMAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         manager.stopServerBlocking(statusNote: "Shutting down")
-        metricsTimer?.invalidate()
-        metricsTimer = nil
+        manager.stopRuntimeMonitoring()
     }
 
     @MainActor
@@ -50,20 +46,6 @@ final class TinyLLMAppDelegate: NSObject, NSApplicationDelegate {
                 self?.showMainWindow()
             }
         )
-    }
-
-    private func startMetricsTimer() {
-        metricsTimer?.invalidate()
-        metricsTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in
-                self.manager.updateMetrics()
-                self.manager.refreshThermalState()
-            }
-        }
-        if let timer = metricsTimer {
-            RunLoop.main.add(timer, forMode: .common)
-        }
     }
 
     private func makeWindowController() -> NSWindowController {

@@ -36,7 +36,7 @@ struct StatusMenuView: View {
                     .foregroundColor(Color.accentColor)
                     .clipShape(Capsule())
             }
-            Text("CPU \(manager.cpuPercent) · Memory \(manager.memPercent)")
+            Text("CPU \(manager.runtimeMetrics.llmCPUDisplay) · Memory \(manager.runtimeMetrics.memorySummary)")
                 .font(.caption2)
                 .foregroundColor(.secondary)
             Text(manager.statusText)

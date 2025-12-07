@@ -7,21 +7,24 @@ struct HardwareSpecs {
     let ramGB: Int
     let chipFamily: ChipFamily
     let gpuName: String
+    let supportsFlashAttention: Bool
 }
 @MainActor
 enum HardwareService {
 
     // MARK: - Main entrypoint
     /// Returns a full hardware snapshot used by LLMManager.
-    static func detectSpecs() async -> HardwareSpecs {
+    static func detectSpecs(serverBinary: URL?) async -> HardwareSpecs {
         let ram = detectRAM()
         let chip = detectChipFamily()
         let gpu = detectGPUName()
+        let flash = detectFlashAttentionSupport(serverBinary: serverBinary)
 
         return HardwareSpecs(
             ramGB: ram,
             chipFamily: chip,
-            gpuName: gpu
+            gpuName: gpu,
+            supportsFlashAttention: flash
         )
     }
 
@@ -179,4 +182,13 @@ enum HardwareService {
     private static var cachedRAMGB: Int?
 
     private static let ramCacheLock = NSLock()
+    
+    private static func detectFlashAttentionSupport(serverBinary: URL?) -> Bool {
+        guard let binary = serverBinary else { return false }
+        guard FileManager.default.fileExists(atPath: binary.path) else { return false }
+
+        let result = ProcessRunner.run(binary.path, ["--help"])
+        guard result.code == 0 else { return false }
+        return result.out.lowercased().contains("flash-attn")
+    }
 }

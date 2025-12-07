@@ -26,20 +26,15 @@ struct MainWindowView: View {
             metricsSection
             
             Divider()
-            
+
             // MARK: - Server Controls
             controlButtons
-            
-            Divider()
-            
-            // MARK: - Logs
-            logViewer
-            
+
             }
             .padding()
             .frame(minWidth: 650)
         }
-        .frame(minHeight: 650)
+        .frame(minHeight: 600)
     }
 }
 
@@ -153,8 +148,8 @@ private extension MainWindowView {
                 .font(.headline)
             
             HStack(spacing: 20) {
-                metricBox(title: "CPU", value: manager.cpuPercent)
-                metricBox(title: "Memory", value: manager.memPercent)
+                metricBox(title: "CPU", value: manager.runtimeMetrics.llmCPUDisplay)
+                metricBox(title: "Memory", value: manager.runtimeMetrics.memorySummary)
                 metricBox(title: "Context", value: "\(manager.effectiveCtxSize)")
                 metricBox(title: "Threads", value: "\(manager.threadCount)")
             }
@@ -203,26 +198,6 @@ private extension MainWindowView {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-        }
-    }
-}
-
-// MARK: - Logs
-private extension MainWindowView {
-    var logViewer: some View {
-        VStack(alignment: .leading) {
-            Text("Logs")
-                .font(.headline)
-            
-            ScrollView {
-                Text(manager.logTail)
-                    .font(.system(.caption, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(8)
-            }
-            .frame(minHeight: 200)
-            .background(Color(NSColor.textBackgroundColor))
-            .cornerRadius(8)
         }
     }
 }

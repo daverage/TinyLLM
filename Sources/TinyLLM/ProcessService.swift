@@ -2,8 +2,8 @@ import Foundation
 import Darwin
 
 struct ProcessMetrics {
-    let cpu: String   // e.g. "24.3%"
-    let mem: String   // e.g. "1.2%"
+    let cpuPercent: String   // e.g. "24.3%"
+    let memPercent: String   // e.g. "1.2%"
 }
 
 actor ProcessService {
@@ -160,11 +160,11 @@ actor ProcessService {
             
             let cpuVal = parts[0]
             let memVal = parts[1]
-            
+
             let cpu = cpuVal.hasSuffix("%") ? cpuVal : cpuVal + "%"
             let mem = memVal.hasSuffix("%") ? memVal : memVal + "%"
-            
-            return ProcessMetrics(cpu: cpu, mem: mem)
+
+            return ProcessMetrics(cpuPercent: cpu, memPercent: mem)
         } catch {
             return nil
         }

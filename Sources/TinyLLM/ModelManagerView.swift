@@ -3,14 +3,14 @@ import SwiftUI
 struct ModelManagerView: View {
     @EnvironmentObject var manager: LLMManager
 
-    private let bytesFormatter: ByteCountFormatter = {
+    private static let bytesFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
         formatter.allowedUnits = [.useMB, .useGB]
         formatter.countStyle = .file
         return formatter
     }()
 
-    private let relativeDateFormatter: RelativeDateTimeFormatter = {
+    private static let relativeDateFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter
@@ -125,7 +125,7 @@ struct ModelManagerView: View {
                         .font(.headline)
 
                     HStack(spacing: 12) {
-                        Text(bytesFormatter.string(fromByteCount: record?.sizeBytes ?? 0))
+                        Text(Self.bytesFormatter.string(fromByteCount: record?.sizeBytes ?? 0))
                         separator
                         Text(String(format: "%.1fB params", record?.approxBillions ?? 0))
                         separator
@@ -204,7 +204,7 @@ struct ModelManagerView: View {
 
     private func formatted(date: Date?) -> String {
         guard let date = date else { return "unknown" }
-        return relativeDateFormatter.localizedString(for: date, relativeTo: Date())
+        return Self.relativeDateFormatter.localizedString(for: date, relativeTo: Date())
     }
 
     private func formatted(tps: Double?) -> String {
