@@ -1,32 +1,31 @@
+import Darwin
 import Foundation
 import IOKit
 import IOKit.ps
-import Darwin
 
 struct HardwareSpecs {
     let ramGB: Int
     let chipFamily: ChipFamily
     let gpuName: String
 }
-
+@MainActor
 enum HardwareService {
-    
+
     // MARK: - Main entrypoint
     /// Returns a full hardware snapshot used by LLMManager.
     static func detectSpecs() async -> HardwareSpecs {
         let ram = detectRAM()
         let chip = detectChipFamily()
         let gpu = detectGPUName()
-        
+
         return HardwareSpecs(
             ramGB: ram,
             chipFamily: chip,
             gpuName: gpu
         )
     }
-    
+
     // MARK: - RAM detection
-    
     /// Returns system RAM in whole GiB with memoization.
     static func detectRAM() -> Int {
         ramCacheLock.lock()
@@ -45,7 +44,7 @@ enum HardwareService {
             let gb = Double(size) / 1024 / 1024 / 1024
             computed = max(4, Int(gb.rounded()))
         } else {
-            computed = 8 // fallback
+            computed = 8  // fallback
         }
 
         ramCacheLock.lock()
@@ -53,9 +52,9 @@ enum HardwareService {
         ramCacheLock.unlock()
         return computed
     }
-    
+
     // MARK: - CPU / chip detection
-    
+
     static func detectChipFamily() -> ChipFamily {
         // Apple Silicon check
         if let cstr = sysctlString("machdep.cpu.brand_string")?.lowercased() {
@@ -63,20 +62,21 @@ enum HardwareService {
             if cstr.contains("m2") { return .m2 }
             if cstr.contains("m3") { return .m3 }
             if cstr.contains("m4") { return .m4 }
-            if cstr.contains("apple") { return .m1 } // generic fallback
+            if cstr.contains("apple") { return .m1 }  // generic fallback
         }
-        
+
         // Fallback: Intel or Unknown
         if let arch = sysctlString("hw.machine")?.lowercased(),
-           arch.contains("x86") {
+            arch.contains("x86")
+        {
             return .intel
         }
-        
+
         return .unknown
     }
-    
+
     // MARK: - GPU name / Metal device
-    
+
     static func detectGPUName() -> String {
         let service = IOServiceGetMatchingService(
             kIOMainPortDefault,
@@ -87,15 +87,19 @@ enum HardwareService {
 
         return ioName(service) ?? "Unknown GPU"
     }
-    
+
     private static func ioName(_ service: io_service_t) -> String? {
         let key = "model" as CFString
-        guard let cfValue = IORegistryEntryCreateCFProperty(service, key, kCFAllocatorDefault, 0)?.takeRetainedValue() else {
+        guard
+            let cfValue = IORegistryEntryCreateCFProperty(service, key, kCFAllocatorDefault, 0)?
+                .takeRetainedValue()
+        else {
             return nil
         }
 
         if let data = cfValue as? Data,
-           let str = String(data: data, encoding: .utf8) {
+            let str = String(data: data, encoding: .utf8)
+        {
             return str.trimmingCharacters(in: .controlCharacters)
         }
 
@@ -105,16 +109,17 @@ enum HardwareService {
 
         return nil
     }
-    
+
     // MARK: - System memory usage (global)
-    
+
     /// Returns memory pressure as a string "62.5%"
     static func getMemoryUsagePercent() -> String {
         var stats = vm_statistics64()
-        var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.size / MemoryLayout<integer_t>.size)
-        
+        var count = mach_msg_type_number_t(
+            MemoryLayout<vm_statistics64_data_t>.size / MemoryLayout<integer_t>.size)
+
         let hostPort: mach_port_t = mach_host_self()
-        
+
         let result = withUnsafeMutablePointer(to: &stats) {
             $0.withMemoryRebound(
                 to: integer_t.self,
@@ -123,41 +128,41 @@ enum HardwareService {
                 host_statistics64(hostPort, HOST_VM_INFO64, $0, &count)
             }
         }
-        
+
         guard result == KERN_SUCCESS else { return "0%" }
-        
+
         var pageSize: vm_size_t = 0
         host_page_size(hostPort, &pageSize)
-        
+
         let active = Double(stats.active_count) * Double(pageSize)
-        let wired  = Double(stats.wire_count) * Double(pageSize)
-        let spec   = Double(stats.speculative_count) * Double(pageSize)
+        let wired = Double(stats.wire_count) * Double(pageSize)
+        let spec = Double(stats.speculative_count) * Double(pageSize)
         let compressed = Double(stats.compressor_page_count) * Double(pageSize)
-        
+
         let used = active + wired + spec + compressed
         let total = Double(detectRAM()) * 1024 * 1024 * 1024
-        
+
         let pct = (used / total) * 100
         return String(format: "%.1f%%", pct)
     }
-    
+
     // MARK: - CPU load fallback
-    
+
     /// Returns load average (1 min) as a pseudo CPU% fallback.
     static func getCPULoad() -> String {
         var load = [Double](repeating: 0, count: 3)
         let size = load.count
         let res = getloadavg(&load, Int32(size))
-        
+
         if res > 0 {
             let pct = load[0] * 100 / Double(ProcessInfo.processInfo.activeProcessorCount)
             return String(format: "%.1f%%", pct)
         }
         return "0%"
     }
-    
+
     // MARK: - Helper: sysctl string
-    
+
     private static func sysctlString(_ name: String) -> String? {
         var size = 0
         sysctlbyname(name, nil, &size, nil, 0)
@@ -172,5 +177,6 @@ enum HardwareService {
 
     // MARK: - RAM cache
     private static var cachedRAMGB: Int?
+
     private static let ramCacheLock = NSLock()
 }

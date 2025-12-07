@@ -49,7 +49,9 @@ actor ModelIndexService {
     
     init(appSupportRoot: URL) {
         self.indexURL = appSupportRoot.appendingPathComponent("model_index.json")
-        load()
+        Task {
+            await self.load()
+        }
     }
     
     // MARK: - Public APIs
@@ -129,7 +131,7 @@ actor ModelIndexService {
     
     // MARK: - Disk
     
-    private func load() {
+    private func load() async {
         guard let data = try? Data(contentsOf: indexURL) else { return }
         
         if let decoded = try? JSONDecoder().decode([String: ModelRecord].self, from: data) {

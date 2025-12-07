@@ -73,9 +73,7 @@ actor ProcessService {
             let handle = pipe.fileHandleForReading
             logTask = Task.detached {
                 defer { try? handle.close() }
-                await withTaskCancellationHandler {
-                    try? handle.close()
-                } operation: {
+                await withTaskCancellationHandler(operation: {
                     while true {
                         if Task.isCancelled { break }
                         let data = handle.readData(ofLength: 4096)
@@ -84,7 +82,9 @@ actor ProcessService {
                             appendToFile(url: logURL, text: chunk)
                         }
                     }
-                }
+                }, onCancel: {
+                    try? handle.close()
+                })
             }
         }
         

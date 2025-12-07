@@ -32,6 +32,7 @@ final class TinyLLMAppDelegate: NSObject, NSApplicationDelegate {
         metricsTimer = nil
     }
 
+    @MainActor
     @objc func showMainWindow(_ sender: Any? = nil) {
         if windowController == nil {
             windowController = makeWindowController()

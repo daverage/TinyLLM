@@ -14,6 +14,7 @@
 		4D46B2A8964D3639FC6A406D /* StatusMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00BCE4F12166AB1E1851465B /* StatusMenuView.swift */; };
 		6657C18F172F830CCFBD0B34 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB27BB5E196AC9A03F7A47DE /* AppDelegate.swift */; };
 		67B5CB7CCA7F33E5EE953C2C /* TinyLLMApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1046BC0E48658E47B96932FE /* TinyLLMApp.swift */; };
+		C6A2C8B45E2C4521B226A6E2 /* AppKitExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A6946A16E7D0D277E181F4 /* AppKitExtensions.swift */; };
 		736EA20FF076D1E99CD4931B /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F27F79154B1539E49DA4B0 /* SettingsWindow.swift */; };
 		795D78B1B549DA4E2CEF674B /* BenchmarkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 759018E11BCC53A9EDCFE48B /* BenchmarkService.swift */; };
 		7E5A413FC8E89AD0100181F5 /* ModelIndexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C28F6E66FF4614C78ECEF49 /* ModelIndexService.swift */; };
@@ -32,6 +33,7 @@
 /* Begin PBXFileReference section */
 		00BCE4F12166AB1E1851465B /* StatusMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuView.swift; sourceTree = "<group>"; };
 		1046BC0E48658E47B96932FE /* TinyLLMApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinyLLMApp.swift; sourceTree = "<group>"; };
+		72A6946A16E7D0D277E181F4 /* AppKitExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKitExtensions.swift; sourceTree = "<group>"; };
 		2381C652C01A8ECC956F8CA0 /* ProcessRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessRunner.swift; sourceTree = "<group>"; };
 		32D08E4F28077029807AB4F5 /* ModelManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManagerView.swift; sourceTree = "<group>"; };
 		3C28F6E66FF4614C78ECEF49 /* ModelIndexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelIndexService.swift; sourceTree = "<group>"; };
@@ -76,6 +78,7 @@
 				66F27F79154B1539E49DA4B0 /* SettingsWindow.swift */,
 				00BCE4F12166AB1E1851465B /* StatusMenuView.swift */,
 				49011766D187A1460E8F63F5 /* ThermalService.swift */,
+				72A6946A16E7D0D277E181F4 /* AppKitExtensions.swift */,
 				1046BC0E48658E47B96932FE /* TinyLLMApp.swift */,
 			);
 			name = TinyLLM;
@@ -170,6 +173,7 @@
 				736EA20FF076D1E99CD4931B /* SettingsWindow.swift in Sources */,
 				4D46B2A8964D3639FC6A406D /* StatusMenuView.swift in Sources */,
 				A9BEA9F42EF146B5B996EBD5 /* ThermalService.swift in Sources */,
+				C6A2C8B45E2C4521B226A6E2 /* AppKitExtensions.swift in Sources */,
 				67B5CB7CCA7F33E5EE953C2C /* TinyLLMApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
